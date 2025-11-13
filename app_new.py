@@ -87,11 +87,6 @@ llm="gpt-4o-mini",
         "temperature": 0.4,
     }
 )
-# synthesis_task = Task(
-#     description="Combine both image-based and data-based insights to create a unified post-campaign performance story.",
-#     expected_output="A narrative summary highlighting key takeaways, successes, and improvement opportunities.",
-#     agent=insight_synthesizer
-# )
 
 ppt_writer = Agent(
 role="Presentation Designer",
@@ -110,21 +105,16 @@ role="Presentation Designer",
         "temperature": 0.4,
     }
 )
-# ppt_task = Task(
-#     description="Create a PowerPoint outline for a post-campaign analysis presentation using the synthesized insights.",
-#     expected_output="A structured text outline with slide titles, bullet points, and suggestions for visuals or charts.",
-#     agent=ppt_writer
-# )
 
 # ---------------------------
 # Streamlit UI
 # ---------------------------
 
-st.title("📊 AI Post Campaign Analysis Generator")
+st.title("📊 Agentic Post Campaign Analysis Generator")
 st.write("Upload your **dashboard image** and **campaign CSV/XLSX file** to generate insights and a PowerPoint report.")
 
 uploaded_image = st.file_uploader("📸 Upload Dashboard/Chart Image", type=["jpg", "jpeg", "png"])
-uploaded_file = st.file_uploader("📈 Upload Campaign Data File", type=["csv", "xlsx"])
+uploaded_file = st.file_uploader("📈 Upload Campaign Data File", type=["csv", "xlsx", "xls"])
 
 prompt = st.text_area("Enter your prompt:", placeholder="Ask me something...")
 
@@ -252,29 +242,13 @@ def encode_image_to_data_uri(image_file):
 if st.button("Generate Response"):
     if uploaded_image or uploaded_file:
         with st.spinner("Processing your files..."):
-            # Read image
-            # image = Image.open(uploaded_image)
-            # st.image(image, caption="Uploaded Dashboard Image", use_container_width=True)
-
-
-
-            # st.dataframe(df.head())
-
-            # ---------------------------
-            # CrewAI Multi-Agent Flow
-            # ---------------------------
-
-            # crew = Crew(
-            #     agents=[visual_analyst, data_analyst, insight_synthesizer, ppt_writer],
-            #     tasks=[visual_task, data_task, synthesis_task, ppt_task]
-            # )
 
             visual_output = ""
             if uploaded_image is not None:
                 # 1️⃣ Visual Analysis
                 st.info("🔍 Extracting visual insights...")
                 data_uri = encode_image_to_data_uri(uploaded_image)
-                visual_output = visual_analyst.kickoff(f"Analyze this marketing dashboard and describe key metrics, trends, and anomalies.\n{data_uri}")
+                visual_output = visual_analyst.kickoff(f"Analyze this marketing dashboard and describe key metrics, trends, and anomalies.\n{data_uri} with context being:\n {prompt}")
 
             # 2️⃣ Data Analysis
             data_output = ""
@@ -286,77 +260,18 @@ if st.button("Generate Response"):
                 else:
                     df = pd.read_excel(uploaded_file)
                 data_summary = df.describe(include='all').to_string()
-                # data_output = data_analyst.execute({
-                #     "data": df
-                # })
-                # #data_output = data_task.run(input=data_summary)
-                data_output = data_analyst.kickoff(f"Analyze the following campaign data and extract key trends, insights, and performance summary:\n{data_summary}")
+                data_output = data_analyst.kickoff(f"Analyze the following campaign data and extract key trends, insights, and performance summary:\n{data_summary} with context being:\n {prompt}")
 
             # 3️⃣ Merge both
             st.info("🧩 Merging insights...")
-            # synth_input = f"Visual insights:\n{visual_output}\n\nData insights:\n{data_output}"
             synth_input = f"Visual insights:\n{visual_output}\n\nData insights:\n{data_output}"
-            synth_output = insight_synthesizer.kickoff(f"Combine the following insights into a unified post-campaign story:\n{synth_input}")
-            #synth_output = synthesis_task.run(input={"visual": visual_output, "data": data_output})
-            # synth_output = synthesis_task.execute({
-            #     "visual": visual_output,
-            #     "data": data_output
-            # })
+            synth_output = insight_synthesizer.kickoff(f"Combine the following insights into a unified post-campaign story:\n{synth_input} and create chart images based on the analysis")
 
             # 4️⃣ Create PPT structure
             st.info("🖋️ Creating PowerPoint outline...")
 
-            # ppt_template = [
-            #     {"slide_number": 1, "title": "Campaign Objective", "content": [], "charts": []},
-            #     {"slide_number": 2, "title": "Strategy & Execution", "content": [], "charts": []},
-            #     {"slide_number": 3, "title": "Performance Growth", "content": [], "charts": []},
-            #     {"slide_number": 4, "title": "Performance by Channels", "content": [], "charts": []}
-            # ]
-
-            #ppt_input = "create a json format for the below pages generally the json will be used to create the ppt Page 1 Title Page Post Campaign Analysis Page 2  Page Title Campaign  Objective Page 3  Page Title Strategy & Excecutive Page 4  Page Title Performance by Channels Page 5  Page Title Learning and Insights Page 3 and page 4 must have a image location to attach a image I should be able to control the font, font colour of title and description So save the json format in the variable or function then  call the json to convert to pptx use the pptx library in the code give option to customise the style of the ppt"
-
-
-#             ppt_input = f"""
-# Slide Template: {ppt_template}
-# Synthesized Insights: {synth_output}
-#
-# Task:
-# 1. From the synthesized insights, generate a structured KPI dataset for the campaign.
-#    - Include all relevant metrics like CTR, CPC, Conversions, ROAS, Engagement Rate, etc.
-#    - Organize KPIs with date/time or segment breakdowns if available.
-# 2. Map the insights into the 4-slide template:
-#    Slide 1: Campaign Objective
-#    Slide 2: Strategy & Execution
-#    Slide 3: Performance Growth
-#    Slide 4: Performance by Channels
-# 3. For each slide:
-#    - Provide concise bullet points summarizing the insights.
-#    - Specify charts with actual KPI values so they can be plotted automatically.
-# 4. Output must be in JSON format with the following structure:
-#    - slide_number
-#    - title
-#    - bullets
-#    - charts: each chart contains type, metric, and data (KPI values)
-# 5. Keep output concise, under 500 tokens.
-#
-# Generate slide-ready proper parseable JSON format  in one output.
-# """
-
             ppt_outline = ppt_writer.kickoff(f"Create 5-7 PowerPoint slide outlines (title + 3-5 bullet points each) for the following insights:\n{synth_output}")
-            # ppt_outline = ppt_task.run(input=synth_output)
-            # ppt_outline = ppt_task.execute({
-            #     "insights": synth_output
-            # })
 
-            # ppt_outline = ppt_writer.kickoff(str(ppt_input))
-            #
-            # print(ppt_outline)  # see what it prints
-            # print(ppt_outline.raw)  # raw string (might be empty)
-            # print(ppt_outline.json_dict)
-
-            # ---------------------------
-            # PPT Generation
-            # ---------------------------
 
             def create_ppt_from_text(ppt_outline_text):
                 prs = Presentation()
@@ -380,56 +295,6 @@ if st.button("Generate Response"):
             ppt_outline_text = getattr(ppt_outline, "raw", None) or str(ppt_outline)
 
             ppt_bytes = create_ppt_from_text(ppt_outline_text)
-
-
-
-
-
-
-            #ppt_outline_text = getattr(ppt_outline, "raw", None) or str(ppt_outline)
-
-            # json_output = json.loads(ppt_outline.raw)
-
-            #print(json_output)
-
-
-
-            # # -----------------------------
-            # # Generate PPT
-            # # -----------------------------
-            # prs = Presentation()
-            # tmp_dir = Path(tempfile.mkdtemp()) / "charts"
-            # tmp_dir.mkdir(parents=True, exist_ok=True)
-            #
-            # for slide_data in ppt_outline:
-            #     slide = prs.slides.add_slide(prs.slide_layouts[1])  # Title + Content
-            #     slide.shapes.title.text = slide_data["title"]
-            #
-            #     # Add bullets
-            #     tf = slide.placeholders[1].text_frame
-            #     tf.clear()
-            #     for bullet in slide_data.get("bullets", []):
-            #         p = tf.add_paragraph()
-            #         p.text = bullet
-            #         p.level = 0
-            #         p.font.size = Pt(16)
-            #
-            #     # Add charts
-            #     for chart in slide_data.get("charts", []):
-            #         chart_path = create_chart_image(chart, tmp_dir)
-            #         if chart_path:
-            #             slide.shapes.add_picture(chart_path, Inches(1), Inches(2), width=Inches(8), height=Inches(4))
-            #
-            # # -----------------------------
-            # # Save PPT
-            # # -----------------------------
-            # output_file = "campaign_ppt_with_charts.pptx"
-            # prs.save(output_file)
-
-
-            # ---------------------------
-            # Output Download
-            # ---------------------------
 
             st.success("✅ Post Campaign Analysis PPT generated!")
             st.download_button(
